@@ -1,5 +1,6 @@
 #include "random.h"
 #include "math.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
 
@@ -72,7 +73,13 @@ main (int argc, char** argv)
   int samples_per_thread_plus_one = samples_per_thread + 1;
   int remaining_samples = num_samples % num_threads;
 
-  pthread_t tid[num_threads];
+  pthread_t *tid;
+  
+  if ((tid = (pthread_t *) malloc(sizeof(pthread_t) * num_threads)) == NULL)
+  {
+    fprintf (stderr, "cannot allocate enough memory for pthread array\n");
+    return 1;
+  }
   
   int i;
   for (i = 0; i < num_threads; i++)
@@ -95,6 +102,11 @@ main (int argc, char** argv)
 
   double relative_error = ((pi - M_PI) / M_PI);
   printf ("relative error: %f\n", relative_error);
+
+
+  // free heap 
+  free(tid);
+
 
   return 0;
 }
