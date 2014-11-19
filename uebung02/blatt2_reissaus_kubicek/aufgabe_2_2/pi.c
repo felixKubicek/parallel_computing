@@ -1,4 +1,5 @@
 #include "random.h"
+#include "math.h"
 #include <stdio.h>
 #include <pthread.h>
 
@@ -90,9 +91,11 @@ main (int argc, char** argv)
   
   int circle_hits = num_samples - circle_misses;
   double pi = ((double) circle_hits / num_samples) * 4;
-
   printf ("estimation of pi: %f\n", pi);
-  
+
+  double relative_error = ((pi - M_PI) / M_PI);
+  printf ("relative error: %f\n", relative_error);
+
   return 0;
 }
 
