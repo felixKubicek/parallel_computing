@@ -22,7 +22,7 @@ thread_routine (void * arg)
 {
   int *samples_to_compute = arg;
    
-  //printf ("thread_id: %d; num_samples: %d; x: %f; y: %f\n", (int) pthread_self (), *samples_to_compute, x, y); 
+  printf ("thread_id: %d; num_samples: %d;\n", (int) pthread_self (), *samples_to_compute); 
   int k;
   for (k = 0; k < *samples_to_compute; k++)
   {  
