@@ -7,38 +7,45 @@
 #define THREAD_ARG 0
 #define CIRCLE_RADIUS 1
 
-static pthread_mutex_t circle_misses_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int circle_misses = 0;
+static int circle_hits = 0;
+
+
+typedef struct
+{
+  int samples_to_compute;
+  int circle_hits_ret;
+} thread_arg;
 
 
 int
-circle_miss(double x, double y)
+circle_hit(double x, double y)
 {
-  return ((x * x) + (y * y) > 1);
+  return ((x * x) + (y * y) <= 1);
 }
 
 static void *
 thread_routine (void * arg)
 {
-  int *samples_to_compute = arg;
+  thread_arg *local_arg = (thread_arg *) arg;
+  int samples_to_compute = local_arg->samples_to_compute;
+  int local_circle_hits = 0;
    
-  printf ("thread_id: %d; num_samples: %d;\n", (int) pthread_self (), *samples_to_compute); 
   int k;
-  for (k = 0; k < *samples_to_compute; k++)
+  for (k = 0; k < samples_to_compute; k++)
   {  
     double x = pr_random_f(CIRCLE_RADIUS);
     double y = pr_random_f(CIRCLE_RADIUS);
  
-    if (circle_miss(x,y))
+    if (circle_hit(x,y))
     {
-      pthread_mutex_lock(&circle_misses_mutex);
-      //printf("begin circle_mutex: %d\n",(int) pthread_self ()); 
-      circle_misses ++;
-      //printf("end   circle_mutex: %d\n",(int) pthread_self ());
-      pthread_mutex_unlock(&circle_misses_mutex);
+      local_circle_hits ++;
     }
   }
   
+  printf ("thread_id: %d; num_samples: %d; circle_hits: %d\n", (int) pthread_self (), samples_to_compute, local_circle_hits); 
+  
+  local_arg->circle_hits_ret = local_circle_hits;  
+
   pthread_exit(NULL);
 }
 
@@ -70,43 +77,50 @@ main (int argc, char** argv)
   
   // calculating number of samples per thread
   int samples_per_thread = num_samples / num_threads;
-  int samples_per_thread_plus_one = samples_per_thread + 1;
   int remaining_samples = num_samples % num_threads;
 
   pthread_t *tid;
+  thread_arg *thread_args; 
   
   if ((tid = (pthread_t *) malloc(sizeof(pthread_t) * num_threads)) == NULL)
   {
     fprintf (stderr, "cannot allocate enough memory for pthread array\n");
     return 1;
   }
+
+  if ((thread_args = (thread_arg *) malloc(sizeof(thread_arg) * num_threads)) == NULL)
+  {
+    fprintf (stderr, "cannot allocate enough memory for pthread arguments array\n");
+    return 1;
+  }
   
   int i;
   for (i = 0; i < num_threads; i++)
   {
-    int *samples_to_compute = (remaining_samples > i) ? &samples_per_thread_plus_one : &samples_per_thread;
+    thread_arg *current_arg = &thread_args[i];
+    current_arg->samples_to_compute = (remaining_samples > i) ? samples_per_thread + 1 : samples_per_thread;
    
-    pthread_create (&tid[i], NULL, &thread_routine, (void *) samples_to_compute);
+    pthread_create (&tid[i], NULL, &thread_routine, (void *) current_arg);
   }
 
   for (i = 0; i < num_threads; i++)
   {
     pthread_join (tid[i], NULL);
+    circle_hits += thread_args[i].circle_hits_ret;
   }
   
   printf ("main() reporting that all %d threads have terminated\n", num_threads);
+  printf ("global number of circle hits: %d\n", circle_hits);
   
-  int circle_hits = num_samples - circle_misses;
   double pi = ((double) circle_hits / num_samples) * 4;
   printf ("estimation of pi: %f\n", pi);
 
   double relative_error = ((pi - M_PI) / M_PI);
   printf ("relative error: %f\n", relative_error);
 
-
   // free heap 
   free(tid);
-
+  free(thread_args);
 
   return 0;
 }
