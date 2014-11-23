@@ -42,7 +42,7 @@ thread_routine (void * arg)
     }
   }
   
-  printf ("thread_id: %d; num_samples: %d; circle_hits: %d\n", (int) pthread_self (), samples_to_compute, local_circle_hits); 
+//  printf ("thread_id: %d; num_samples: %d; circle_hits: %d\n", (int) pthread_self (), samples_to_compute, local_circle_hits); 
   
   local_arg->circle_hits_ret = local_circle_hits;  
 
@@ -109,8 +109,8 @@ main (int argc, char** argv)
     circle_hits += thread_args[i].circle_hits_ret;
   }
   
-  printf ("main() reporting that all %d threads have terminated\n", num_threads);
-  printf ("global number of circle hits: %d\n", circle_hits);
+  //printf ("main() reporting that all %d threads have terminated\n", num_threads);
+  //printf ("global number of circle hits: %d\n", circle_hits);
   
   double pi = ((double) circle_hits / num_samples) * 4;
   printf ("estimation of pi: %f\n", pi);
