@@ -49,7 +49,7 @@ main (int argc, char** argv)
     
   }
   
-  #pragma omp parallel
+  #pragma omp parallel num_threads(num_threads)
   {
     printf ("number of parallel threads: %d\n", omp_get_num_threads());
   }
