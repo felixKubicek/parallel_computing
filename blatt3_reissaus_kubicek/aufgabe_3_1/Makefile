@@ -1,6 +1,5 @@
 CFLAGS=-Wall -fopenmp -O2
-CC=gcc-4.9
-
+CC=gcc
 pi: pi.c random.o
 	$(CC) $(CFLAGS) $+ -o $@
 

@@ -47,10 +47,10 @@ main (int argc, char** argv)
     } 
   }
   
-  #pragma omp parallel num_threads(num_threads)
+  /*#pragma omp parallel num_threads(num_threads)
   {
     printf ("number of parallel threads: %d\n", omp_get_num_threads());
-  }
+  }*/
   
   double pi = ((double) circle_hits / num_samples) * 4;
   printf ("estimation of pi: %f\n", pi);

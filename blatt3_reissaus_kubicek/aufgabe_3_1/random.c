@@ -8,6 +8,8 @@
 int pr_random(void)
 {
   static int state = 0;
+  #pragma omp threadprivate(state)
+
   return (state = (1366 * state + 150889) % RNG_MOD);
 
 }
@@ -15,9 +17,7 @@ int pr_random(void)
 double pr_random_f(double range)
 {  
 	int pr_random_safe = 0;
-  #pragma omp critical(random)
-	{
   	pr_random_safe = pr_random();
-  }
-  return ((double) pr_random_safe / (double) RNG_MOD) * range;
+        
+        return ((double) pr_random_safe / (double) RNG_MOD) * range;
 }
