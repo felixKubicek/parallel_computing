@@ -34,9 +34,8 @@ main (int argc, char** argv)
     return 1;
   }
   
-  
   int k;
-  #pragma omp parallel for schedule(static) private(k,num_samples) shared(circle_hits)
+  #pragma omp parallel for schedule(static) private(k) reduction(+:circle_hits) num_threads(num_threads)
   for (k = 0; k < num_samples; k++)
   {  
     double x = pr_random_f(CIRCLE_RADIUS);
@@ -44,9 +43,8 @@ main (int argc, char** argv)
  
     if (((x * x) + (y * y)) <= 1)
     {
-      circle_hits ++;
-    }
-    
+      circle_hits++;
+    } 
   }
   
   #pragma omp parallel num_threads(num_threads)

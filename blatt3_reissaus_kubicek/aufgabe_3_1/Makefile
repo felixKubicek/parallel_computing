@@ -1,4 +1,4 @@
-CFLAGS=-Wall -fopenmp
+CFLAGS=-Wall -fopenmp -O2
 CC=gcc-4.9
 
 pi: pi.c random.o
