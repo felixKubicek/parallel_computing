@@ -51,14 +51,11 @@ static void initConfig(Line *buf, int lines, int rem_lines, int my_lines, int my
     initRandomLEcuyer(424243);
     int no_rands = 0;
 
-    /* if all processes with a smaller rank have to process a rest element*/
+    /* calculate how often the random function was called before */
     if (my_rank <= rem_lines)
     {
         no_rands = my_rank * (lines + 1) * XSIZE;
     }
-
-    /* if there are processes with a smaller rank that have a rest element and others
-    that don't have one*/
     else
     {
         no_rands = (rem_lines * (lines + 1) * XSIZE) +
