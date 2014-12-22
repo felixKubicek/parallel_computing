@@ -29,17 +29,19 @@ typedef State Line[XSIZE + 2];
 /* determine random integer between 0 and n-1 */
 #define randInt(n) ((int)(nextRandomLEcuyer() * n))
 
+void print_field(Line *buf, int lines, char* name);
+
 /* --------------------- CA simulation -------------------------------- */
 
 
-void print_line(Line line)
+void print_line(Line line, int index)
 {
     int z;
     for (z = 0; z < sizeof(Line); z++)
     {
         printf("%d", line[z]);
     }
-    printf("\n");
+    printf("   line %d \n", index);
 }
 
 
@@ -112,28 +114,27 @@ static void boundary_left_right(Line *buf, int lines)
 /* make one simulation iteration with lines lines.
  * old configuration is in from, new one is written to to.
  */
-static void simulate(Line *from, Line *to, int lines, int my_rank, int world_size)
+static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_size)
 {
     int x, y;
-    boundary_left_right(from, lines);
+    boundary_left_right(from, my_lines);
 
     MPI_Request reqs[4];
 
     int top_neighbour_rank = (my_rank == 0) ? world_size - 1 : my_rank - 1;
     int bottom_neighbour_rank = (my_rank + 1) % world_size;
 
-
     /* send top line */
     MPI_Isend(from[1], sizeof(Line), MPI_CHAR, top_neighbour_rank, 0, MPI_COMM_WORLD, &reqs[0]);
+
     /* send bottom line */
+    MPI_Isend(from[my_lines], sizeof(Line), MPI_CHAR, bottom_neighbour_rank, 1, MPI_COMM_WORLD, &reqs[1]);
 
-    MPI_Isend(from[lines], sizeof(Line), MPI_CHAR, bottom_neighbour_rank, 1, MPI_COMM_WORLD, &reqs[1]);
-
-    /* calculate inner field if present (when more than 2 lines) */
-    if (lines > 2 )
+    /* calculate inner field if present (when more than 2 my_lines) */
+    if (my_lines > 2 )
     {
         int inner_field_start = 2;
-        int inner_field_end = lines - 1;
+        int inner_field_end = my_lines - 1;
 
         for (y = inner_field_start;  y <= inner_field_end;  y++)
         {
@@ -144,20 +145,44 @@ static void simulate(Line *from, Line *to, int lines, int my_rank, int world_siz
         }
     }
 
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 0){
+    //     printf("inner fields my rank: %d\n\n", 0);
+    //     print_line(to[1], 1);
+    //     print_line(to[2], 2);
+    // }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 1){
+    //     printf("inner fields my rank: %d\n\n", 1);
+    //     print_line(to[1], 1);
+    //     print_line(to[2], 2);
+    // }        
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 2){
+    //     printf("inner fields my rank: %d\n\n", 2);
+    //     print_line(to[1], 1);
+    //     print_line(to[2], 2);
+    // }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 3){
+    //     printf("inner fields my rank: %d\n\n", 3);
+    //     print_line(to[1], 1);
+    //     print_line(to[2], 2);
+    // }
+
     /* receive ghost zones */
 
     /* receive top ghost zone */
     MPI_Irecv(from[0], sizeof(Line), MPI_CHAR, top_neighbour_rank, 1,  MPI_COMM_WORLD, &reqs[2]);
     /* receive bottom ghost zone */
-    MPI_Irecv(from[lines + 1], sizeof(Line), MPI_CHAR, bottom_neighbour_rank, 0,  MPI_COMM_WORLD, &reqs[3]);
-
+    MPI_Irecv(from[my_lines + 1], sizeof(Line), MPI_CHAR, bottom_neighbour_rank, 0,  MPI_COMM_WORLD, &reqs[3]);
 
     MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE);
 
     /* calculate outer field (bottom and top line with help of received ghost zones) */
 
     int top_line_index = 1;
-    int bottom_line_index = lines;
+    int bottom_line_index = my_lines;
 
     for (x = 1;  x <= XSIZE;  x++)
     {
@@ -186,7 +211,7 @@ int main(int argc, char **argv)
 
     assert(argc == 3);
 
-    MPI_Init(NULL, NULL);
+    MPI_Init(&argc, &argv);
 
     lines_global = atoi(argv[1]);
     its = atoi(argv[2]);
@@ -205,19 +230,21 @@ int main(int argc, char **argv)
 
     /*
     In order to have an equal distribution of lines, 'rem_lines' will be distributed
-    amont the first processes. For example if rem_lines = 3, then the 
+    among the first processes. For example if rem_lines = 3, then the 
     first three processes will get one more line than the others.
     */
 
     // gather different line counts for processes
     counts = calloc(world_size, sizeof(int));
+    if (!counts)
+    {
+      printf("Error allocating requested memory.\n");
+      exit(1);
+    }
+
     for (i = 0; i < world_size; i++)
     {
-        counts[i] = (rem_lines > i) ? lines + 1 : lines;
-
-        if(i == 0 || i == world_size -1 ){ // first and last process send one ghost zone
-          counts[i]++;
-        }       
+        counts[i] = (rem_lines > i) ? lines + 1 : lines;    
     }
     int my_lines = counts[my_rank];
 
@@ -229,23 +256,69 @@ int main(int argc, char **argv)
 
     // create and initialize cellular automat fields
     from = calloc(my_lines + (2 * GHOSTZONE_SIZE), sizeof(Line));
+    if (!from)
+    {
+      printf("Error allocating requested memory.\n");
+      exit(1);
+    }
+
     to   = calloc(my_lines + (2 * GHOSTZONE_SIZE), sizeof(Line));
+    if (!to)
+    {
+      printf("Error allocating requested memory.\n");
+      exit(1);
+    }
 
     initConfig(from, lines, rem_lines, my_lines, my_rank);
-
 
     //simulate transition of cellular automat
     for (i = 0;  i < its;  i++)
     {
         simulate(from, to, my_lines, my_rank, world_size);
-
+        
         temp = from;
         from = to;
         to = temp;
     }
 
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // printf("\n\n");
+    // if(my_rank == 0){
+    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 0, my_lines);
+    //     print_line(from[0], 0);
+    //     print_line(from[1], 1);
+    //     print_line(from[2], 2);
+    //     print_line(from[3], 3);
+    // }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 1){
+    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 1, my_lines);
+    //     print_line(from[0], 0);
+    //     print_line(from[1], 1);
+    //     print_line(from[2], 2);
+    //     print_line(from[3], 3);
+    // }        
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 2){
+    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 2, my_lines);
+    //     print_line(from[0], 0);
+    //     print_line(from[1], 1);
+    //     print_line(from[2], 2);
+    //     print_line(from[3], 3);
+    // }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // if(my_rank == 3){
+    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 3, my_lines);
+    //     print_line(from[0], 0);
+    //     print_line(from[1], 1);
+    //     print_line(from[2], 2);
+    //     print_line(from[3], 3);
+    // }
+    
+
     // process 0 also has to send his upper ghost zone
-    Line * start_buf = (my_rank == 0 ) ? &from[0] : &from[1];
+    //Line * start_buf = (my_rank == 0 ) ? &from[0] : &from[1];
+    Line * start_buf = &from[1];
 
     int no_elements = counts[my_rank] * sizeof(Line);
 
@@ -255,7 +328,7 @@ int main(int argc, char **argv)
 
     if (my_rank == 0) // process 0 collects all the results
     {
-      result = calloc((lines_global + 2),  sizeof(Line));
+      result = calloc(lines_global,  sizeof(Line));
       
       MPI_Status status;
       for (i = 0; i < world_size; i++)
@@ -264,30 +337,22 @@ int main(int argc, char **argv)
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         //calculate offset in result field depending on rank of sender process
-        int offset;
-        if(status.MPI_SOURCE == 0){
-          offset = 0;
-        }
-        else if (status.MPI_SOURCE <= rem_lines)
+        int offset = 0;
+        if (status.MPI_SOURCE <= rem_lines)
         {
-          offset = (status.MPI_SOURCE * (lines + 1)) + 1;
+          offset = (status.MPI_SOURCE * (lines + 1));
         }
         else
         {
           offset = ((rem_lines * (lines + 1)) +
-                   (status.MPI_SOURCE - rem_lines) * lines) + 1;
+                   (status.MPI_SOURCE - rem_lines) * lines);
         }
 
         MPI_Recv(result[offset], counts[status.MPI_SOURCE] * sizeof(Line), MPI_CHAR, status.MPI_SOURCE,
                  status.MPI_TAG, MPI_COMM_WORLD, &status);
       }
 
-      for(i = 0; i < lines_global + 2; i++){
-        hash2 = getMD5DigestStr(result[i], sizeof(Line));
-        printf("result line %d : %s \n", i, hash2);
-      }
-
-      hash2 = getMD5DigestStr(result[0], sizeof(Line) * (lines_global + 2));
+      hash2 = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
       printf("Hash of whole field: %s \n", hash2);
       
       free(result);
@@ -300,4 +365,20 @@ int main(int argc, char **argv)
     MPI_Finalize();
 
     return EXIT_SUCCESS;
+}
+
+void print_field(Line *buf, int lines, char* name){
+
+  printf("field name: %s\n", name);
+  int x, y;
+
+  for (y = 0;  y <= lines + 1;  y++)
+  {
+    for (x = 0;  x <= XSIZE + 1;  x++)
+    {
+        printf("%d", buf[y][x]);
+    }
+    printf("   line %d\n", y);
+  }
+  printf("\n");
 }

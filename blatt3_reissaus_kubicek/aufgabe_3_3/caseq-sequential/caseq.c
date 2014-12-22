@@ -25,16 +25,14 @@ typedef State Line[XSIZE + 2];
 
 /* determine random integer between 0 and n-1 */
 #define randInt(n) ((int)(nextRandomLEcuyer() * n))
+void print_field(Line *buf, int lines, char* name);
 
 /* --------------------- CA simulation -------------------------------- */
-
-void print_line(Line line);
 
 /* random starting configuration */
 static void initConfig(Line *buf, int lines)
 {
     int x, y;
-
     initRandomLEcuyer(424243);
     for (y = 1;  y <= lines;  y++)
     {
@@ -44,15 +42,6 @@ static void initConfig(Line *buf, int lines)
         }
     }
 
-    long randResult = 0;
-    int i;
-    for (i = 1; i < 7; i++)
-    {
-        for (x = 1;  x <= XSIZE;  x++)
-        {
-            randResult += (long) buf[i][x];
-        }
-    }
 }
 
 /* annealing rule from ChoDro96 page 34
@@ -72,7 +61,6 @@ static State anneal[10] = {0, 0, 0, 0, 1, 0, 1, 1, 1, 1};
 static void boundary(Line *buf, int lines)
 {
     int x, y;
-
 
     for (y = 0;  y <= lines + 1;  y++)
     {
@@ -101,7 +89,9 @@ static void simulate(Line *from, Line *to, int lines)
     int x, y;
 
     boundary(from, lines);
-
+    // printf("after boundary call \n\n");
+    // print_field(from, lines, "from");
+    // print_field(to, lines, "to");
     for (y = 1;  y <= lines;  y++)
     {
         for (x = 1;  x <= XSIZE;  x++)
@@ -116,56 +106,78 @@ static void simulate(Line *from, Line *to, int lines)
 
 int main(int argc, char **argv)
 {
-  int lines, its;
-  int i;
-  Line *from, *to, *temp;
-  char *hash;
+    int lines, its;
+    int i;
+    Line *from, *to, *temp;
+    char *hash;
 
-  assert(argc == 3);
+    assert(argc == 3);
 
-  lines = atoi(argv[1]);
-  its   = atoi(argv[2]);
+    lines = atoi(argv[1]);
+    its   = atoi(argv[2]);
 
-  from = calloc((lines + 2), sizeof(Line));
-  to   = calloc((lines + 2), sizeof(Line));
-
-  initConfig(from, lines);
-
-  //print_line(from[1]);
-
-  for (i = 0;  i < its;  i++)
-  {
-      simulate(from, to, lines);
-        
-      temp = from;
-      from = to;
-      to = temp;  
-  }
-  
-  for(i = 0; i < lines + 2; i++){
-    hash = getMD5DigestStr(from[i], sizeof(Line));
-    printf("result line %d : %s \n", i, hash);
-  }
-  hash = getMD5DigestStr(from[1], sizeof(Line) * lines);
-  printf("Hash of whole field %s \n", hash);
-
-  free(from);
-  free(to);
-  free(hash);
-
-  return EXIT_SUCCESS;
-}
-
-
-void print_line(Line line)
-{
-    int z;
-    for (z = 0; z < sizeof(Line); z++)
+    from = (Line*) calloc((lines + 2), sizeof(Line));
+    if (!from)
     {
-        printf("%d", line[z]);
+      printf("Error allocating requested memory.\n");
+      exit(1);
     }
-    printf("\n");
+
+    to = (Line*) calloc((lines + 2), sizeof(Line));
+    if (!to)
+    {
+      printf("Error allocating requested memory.\n");
+      exit(1);
+    }
+
+    initConfig(from, lines);
+
+    for (i = 0;  i < its;  i++)
+    {
+        // printf("before boundary call %d\n\n", i + 1);
+        // print_field(from, lines, "from");
+        // print_field(to, lines, "to");
+        simulate(from, to, lines);
+        // printf("after simulation \n\n");
+        // print_field(from, lines, "from");
+        // print_field(to, lines, "to");
+
+
+        temp = from;
+        from = to;
+        to = temp;
+
+
+    }
+    //print_field(from, lines, "from");
+
+    hash = getMD5DigestStr(from[1], sizeof(Line) * (lines));
+    printf("hash: %s\n", hash);
+
+    free(from);
+    free(to);
+    free(hash);
+
+    return EXIT_SUCCESS;
 }
+
+void print_field(Line *buf, int lines, char* name){
+
+  printf("field name: %s\n", name);
+  int x, y;
+
+  for (y = 0;  y <= lines + 1;  y++)
+  {
+    for (x = 0;  x <= XSIZE + 1;  x++)
+    {
+        printf("%d", buf[y][x]);
+    }
+    printf("   line %d\n", y);
+  }
+  printf("\n");
+}
+
+
 
 
 
