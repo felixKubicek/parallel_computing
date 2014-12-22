@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* calc and print MD5 checksum of a memory chunk */
 char* getMD5DigestStr(void* buf, size_t buflen)

@@ -109,8 +109,6 @@ static void boundary_left_right(Line *buf, int lines)
 
 }
 
-
-
 /* make one simulation iteration with lines lines.
  * old configuration is in from, new one is written to to.
  */
@@ -145,31 +143,6 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
         }
     }
 
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 0){
-    //     printf("inner fields my rank: %d\n\n", 0);
-    //     print_line(to[1], 1);
-    //     print_line(to[2], 2);
-    // }
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 1){
-    //     printf("inner fields my rank: %d\n\n", 1);
-    //     print_line(to[1], 1);
-    //     print_line(to[2], 2);
-    // }        
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 2){
-    //     printf("inner fields my rank: %d\n\n", 2);
-    //     print_line(to[1], 1);
-    //     print_line(to[2], 2);
-    // }
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 3){
-    //     printf("inner fields my rank: %d\n\n", 3);
-    //     print_line(to[1], 1);
-    //     print_line(to[2], 2);
-    // }
-
     /* receive ghost zones */
 
     /* receive top ghost zone */
@@ -180,7 +153,6 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
     MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE);
 
     /* calculate outer field (bottom and top line with help of received ghost zones) */
-
     int top_line_index = 1;
     int bottom_line_index = my_lines;
 
@@ -281,50 +253,12 @@ int main(int argc, char **argv)
         to = temp;
     }
 
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // printf("\n\n");
-    // if(my_rank == 0){
-    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 0, my_lines);
-    //     print_line(from[0], 0);
-    //     print_line(from[1], 1);
-    //     print_line(from[2], 2);
-    //     print_line(from[3], 3);
-    // }
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 1){
-    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 1, my_lines);
-    //     print_line(from[0], 0);
-    //     print_line(from[1], 1);
-    //     print_line(from[2], 2);
-    //     print_line(from[3], 3);
-    // }        
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 2){
-    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 2, my_lines);
-    //     print_line(from[0], 0);
-    //     print_line(from[1], 1);
-    //     print_line(from[2], 2);
-    //     print_line(from[3], 3);
-    // }
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // if(my_rank == 3){
-    //     printf("before boundary call my rank: %d no of lines: %d\n\n", 3, my_lines);
-    //     print_line(from[0], 0);
-    //     print_line(from[1], 1);
-    //     print_line(from[2], 2);
-    //     print_line(from[3], 3);
-    // }
-    
-
-    // process 0 also has to send his upper ghost zone
-    //Line * start_buf = (my_rank == 0 ) ? &from[0] : &from[1];
     Line * start_buf = &from[1];
 
     int no_elements = counts[my_rank] * sizeof(Line);
 
     // send all results to process 0
     MPI_Send(*start_buf, no_elements, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
-
 
     if (my_rank == 0) // process 0 collects all the results
     {
@@ -353,7 +287,7 @@ int main(int argc, char **argv)
       }
 
       hash2 = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
-      printf("Hash of whole field: %s \n", hash2);
+      printf("hash: %s \n", hash2);
       
       free(result);
     }

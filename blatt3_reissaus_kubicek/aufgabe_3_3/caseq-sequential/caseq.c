@@ -89,9 +89,7 @@ static void simulate(Line *from, Line *to, int lines)
     int x, y;
 
     boundary(from, lines);
-    // printf("after boundary call \n\n");
-    // print_field(from, lines, "from");
-    // print_field(to, lines, "to");
+
     for (y = 1;  y <= lines;  y++)
     {
         for (x = 1;  x <= XSIZE;  x++)
@@ -134,14 +132,7 @@ int main(int argc, char **argv)
 
     for (i = 0;  i < its;  i++)
     {
-        // printf("before boundary call %d\n\n", i + 1);
-        // print_field(from, lines, "from");
-        // print_field(to, lines, "to");
         simulate(from, to, lines);
-        // printf("after simulation \n\n");
-        // print_field(from, lines, "from");
-        // print_field(to, lines, "to");
-
 
         temp = from;
         from = to;
@@ -149,7 +140,6 @@ int main(int argc, char **argv)
 
 
     }
-    //print_field(from, lines, "from");
 
     hash = getMD5DigestStr(from[1], sizeof(Line) * (lines));
     printf("hash: %s\n", hash);
