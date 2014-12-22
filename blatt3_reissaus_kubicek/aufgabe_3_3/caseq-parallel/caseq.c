@@ -287,7 +287,7 @@ int main(int argc, char **argv)
       }
 
       hash2 = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
-      printf("hash: %s \n", hash2);
+      printf("%s\n", hash2);
       
       free(result);
     }
