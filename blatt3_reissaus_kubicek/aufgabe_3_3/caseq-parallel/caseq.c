@@ -176,10 +176,10 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
 
 int main(int argc, char **argv)
 {
-    int lines_global, its, i, *counts;
+    int lines_global, its, i, *counts, *displ;
     Line *from, *to, *temp;
     Line *result;
-    char *hash = NULL, *hash2 = NULL;
+    char *hash = NULL;
 
     assert(argc == 3);
 
@@ -213,11 +213,33 @@ int main(int argc, char **argv)
       printf("Error allocating requested memory.\n");
       exit(1);
     }
-
+    
+    // displacement for gather
+    displ = calloc(world_size, sizeof(int));
+    
+    if (!displ)
+    {
+      printf("Error allocating requested memory.\n");
+      exit(1);
+    }
+    
     for (i = 0; i < world_size; i++)
     {
-        counts[i] = (rem_lines > i) ? lines + 1 : lines;    
+        
+      // set values of counts array  
+      counts[i] = (rem_lines > i) ? lines + 1 : lines;
+      
+      // set values of displacement array  
+      if (i <= rem_lines)
+      {
+        displ[i] = (i * (lines + 1));
+      }
+      else
+      {
+        displ[i] = ((rem_lines * (lines + 1)) + (i - rem_lines) * lines);
+      }             
     }
+    
     int my_lines = counts[my_rank];
 
     
@@ -252,50 +274,42 @@ int main(int argc, char **argv)
         from = to;
         to = temp;
     }
-
-    Line * start_buf = &from[1];
-
-    int no_elements = counts[my_rank] * sizeof(Line);
-
-    // send all results to process 0
-    MPI_Send(*start_buf, no_elements, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
-
+    
+    Line *start_buf = &from[1];
+    
     if (my_rank == 0) // process 0 collects all the results
     {
       result = calloc(lines_global,  sizeof(Line));
-      
-      MPI_Status status;
-      for (i = 0; i < world_size; i++)
-      {
-        //check if a response has arrived
-        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-        //calculate offset in result field depending on rank of sender process
-        int offset = 0;
-        if (status.MPI_SOURCE <= rem_lines)
-        {
-          offset = (status.MPI_SOURCE * (lines + 1));
-        }
-        else
-        {
-          offset = ((rem_lines * (lines + 1)) +
-                   (status.MPI_SOURCE - rem_lines) * lines);
-        }
-
-        MPI_Recv(result[offset], counts[status.MPI_SOURCE] * sizeof(Line), MPI_CHAR, status.MPI_SOURCE,
-                 status.MPI_TAG, MPI_COMM_WORLD, &status);
-      }
-
-      hash2 = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
-      printf("%s\n", hash2);
-      
-      free(result);
     }
-
-    free(hash);
+    
+    MPI_Datatype mpi_line_type, mpi_send_type;
+  
+    MPI_Type_contiguous(sizeof(Line), MPI_CHAR, &mpi_line_type);
+    MPI_Type_contiguous(my_lines * sizeof(Line), MPI_CHAR, &mpi_send_type); 
+    
+    MPI_Type_commit(&mpi_line_type);
+    MPI_Type_commit(&mpi_send_type); 
+     
+    MPI_Gatherv(*start_buf, 1, mpi_send_type, result, counts, displ, mpi_line_type, 0, MPI_COMM_WORLD);
+   
+    if (my_rank == 0)
+    {
+      hash = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
+      printf("%s\n", hash);
+      
+      // clean up 
+      free(result);
+      free(hash);
+    }
+    
+    // clean up   
+    free(counts);  
+    free(displ);  
     free(from);
     free(to);
-
+    
+    MPI_Type_free(&mpi_line_type);
+    MPI_Type_free(&mpi_send_type);
     MPI_Finalize();
 
     return EXIT_SUCCESS;
