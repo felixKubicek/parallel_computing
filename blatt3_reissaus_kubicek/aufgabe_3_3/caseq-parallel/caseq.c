@@ -179,7 +179,7 @@ int main(int argc, char **argv)
     int lines_global, its, i, *counts;
     Line *from, *to, *temp;
     Line *result;
-    char *hash = NULL;
+    char *hash = NULL, *hash2 = NULL;
 
     assert(argc == 3);
 
@@ -286,8 +286,8 @@ int main(int argc, char **argv)
                  status.MPI_TAG, MPI_COMM_WORLD, &status);
       }
 
-      hash = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
-      printf("%s\n", hash);
+      hash2 = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
+      printf("%s\n", hash2);
       
       free(result);
     }
