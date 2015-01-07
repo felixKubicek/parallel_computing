@@ -176,7 +176,7 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
 
 int main(int argc, char **argv)
 {
-    int lines_global, its, i, *counts, *displ;
+    int lines_global, its, i, *line_counts, *line_displ;
     Line *from, *to, *temp;
     Line *result;
     char *hash = NULL;
@@ -206,18 +206,18 @@ int main(int argc, char **argv)
     first three processes will get one more line than the others.
     */
 
-    // gather different line counts for processes
-    counts = calloc(world_size, sizeof(int));
-    if (!counts)
+    // gather different line line_counts for processes
+    line_counts = calloc(world_size, sizeof(int));
+    if (!line_counts)
     {
       printf("Error allocating requested memory.\n");
       exit(1);
     }
     
-    // displacement for gather
-    displ = calloc(world_size, sizeof(int));
+    // line_displacement for gather
+    line_displ = calloc(world_size, sizeof(int));
     
-    if (!displ)
+    if (!line_displ)
     {
       printf("Error allocating requested memory.\n");
       exit(1);
@@ -226,21 +226,21 @@ int main(int argc, char **argv)
     for (i = 0; i < world_size; i++)
     {
         
-      // set values of counts array  
-      counts[i] = (rem_lines > i) ? lines + 1 : lines;
+      // set values of line_counts array  
+      line_counts[i] = (rem_lines > i) ? lines + 1 : lines;
       
-      // set values of displacement array  
+      // set values of line_displacement array  
       if (i <= rem_lines)
       {
-        displ[i] = (i * (lines + 1));
+        line_displ[i] = (i * (lines + 1));
       }
       else
       {
-        displ[i] = ((rem_lines * (lines + 1)) + (i - rem_lines) * lines);
+        line_displ[i] = ((rem_lines * (lines + 1)) + (i - rem_lines) * lines);
       }             
     }
     
-    int my_lines = counts[my_rank];
+    int my_lines = line_counts[my_rank];
 
     
     if (my_lines <= 0)
@@ -287,7 +287,7 @@ int main(int argc, char **argv)
     MPI_Type_contiguous(sizeof(Line), MPI_CHAR, &mpi_line_type);    
     MPI_Type_commit(&mpi_line_type);
      
-    MPI_Gatherv(*start_buf, my_lines, mpi_line_type, result, counts, displ, mpi_line_type, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(*start_buf, my_lines, mpi_line_type, result, line_counts, line_displ, mpi_line_type, 0, MPI_COMM_WORLD);
    
     if (my_rank == 0)
     {
@@ -300,8 +300,8 @@ int main(int argc, char **argv)
     }
     
     // clean up   
-    free(counts);  
-    free(displ);  
+    free(line_counts);  
+    free(line_displ);  
     free(from);
     free(to);
     
