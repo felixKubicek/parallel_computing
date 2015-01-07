@@ -282,15 +282,12 @@ int main(int argc, char **argv)
       result = calloc(lines_global,  sizeof(Line));
     }
     
-    MPI_Datatype mpi_line_type, mpi_send_type;
+    MPI_Datatype mpi_line_type;
   
-    MPI_Type_contiguous(sizeof(Line), MPI_CHAR, &mpi_line_type);
-    MPI_Type_contiguous(my_lines * sizeof(Line), MPI_CHAR, &mpi_send_type); 
-    
+    MPI_Type_contiguous(sizeof(Line), MPI_CHAR, &mpi_line_type);    
     MPI_Type_commit(&mpi_line_type);
-    MPI_Type_commit(&mpi_send_type); 
      
-    MPI_Gatherv(*start_buf, 1, mpi_send_type, result, counts, displ, mpi_line_type, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(*start_buf, my_lines, mpi_line_type, result, counts, displ, mpi_line_type, 0, MPI_COMM_WORLD);
    
     if (my_rank == 0)
     {
@@ -309,7 +306,6 @@ int main(int argc, char **argv)
     free(to);
     
     MPI_Type_free(&mpi_line_type);
-    MPI_Type_free(&mpi_send_type);
     MPI_Finalize();
 
     return EXIT_SUCCESS;
