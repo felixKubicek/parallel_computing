@@ -1,4 +1,4 @@
-CFLAGS=-Wall -pthread -O2
+CFLAGS=-Wall -pthread -O2 -lrt
 CC=gcc
 
 

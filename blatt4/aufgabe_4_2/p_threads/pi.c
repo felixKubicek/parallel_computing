@@ -67,7 +67,7 @@ print_difference(struct timespec *diff){
   double seconds = (double) diff->tv_sec;
   double nanoseconds = (double) diff->tv_nsec / 1000000000.0;
 
-  printf("time: %.2f\n", seconds + nanoseconds);
+  printf("time in seconds: %.2f\n", seconds + nanoseconds);
 }
 
 int 
@@ -76,7 +76,7 @@ main (int argc, char** argv)
   struct timespec start, end, diff;
 
   //get start time
-  if(clock_gettime(CLOCK_MONOTONIC_HR, &start) != 0){
+  if(clock_gettime(CLOCK_MONOTONIC, &start) != 0){
     fprintf(stderr, "Error: could not get clock time (clock_gettime).");
     exit(1);
   }
@@ -87,22 +87,22 @@ main (int argc, char** argv)
       return 1;
    }
    
-  unsigned int num_threads;
-  unsigned int num_samples;
+  unsigned long num_threads;
+  unsigned long num_samples;
   
-  if (sscanf (argv[1],"%u",&num_threads) != 1)
+  if (sscanf (argv[1],"%lu",&num_threads) != 1)
   {
     fprintf (stderr, "<number_threads> has to be a positive integer\n");
     return 1;
   }
   
-  if (sscanf (argv[2],"%u",&num_samples) != 1)
+  if (sscanf (argv[2],"%lu",&num_samples) != 1)
   {
     fprintf (stderr, "<number_samples> has to be a positive integer\n");
     return 1;
   }
    
-  printf ("start number_threads: %d ,number_samples: %d\n", num_threads, num_samples);
+  printf ("start number_threads: %lu ,number_samples: %lu\n", num_threads, num_samples);
   
   // calculating number of samples per thread
   int samples_per_thread = num_samples / num_threads;
@@ -152,7 +152,7 @@ main (int argc, char** argv)
   free(thread_args);
 
   //get end time
-  if(clock_gettime(CLOCK_MONOTONIC_HR, &end) != 0){
+  if(clock_gettime(CLOCK_MONOTONIC, &end) != 0){
     fprintf(stderr, "Error: could not get clock time (clock_gettime).");
     exit(1);
   }
