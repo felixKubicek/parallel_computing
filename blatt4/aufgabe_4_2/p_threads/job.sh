@@ -8,7 +8,7 @@
 
 # ressources
 #PBS -l nodes=1:ppn=8
-#PBS -l walltime=00:10:00
+#PBS -l walltime=02:59:00
 
 # write error and standard output in one file
 #PBS -j oe
@@ -20,18 +20,15 @@ cd $PBS_O_WORKDIR
 make clean
 make
 
-samples=1000000
+samples=1000000000
 echo ""
 echo "Executing with 1,2,4,8,16 threads."
-/usr/bin/time -p ./pi 1 $samples 
-/usr/bin/time -p ./pi 2 $samples 
-/usr/bin/time -p ./pi 4 $samples 
-/usr/bin/time -p ./pi 8 $samples 
-/usr/bin/time -p ./pi 16 $samples 
-echo ""
-echo "results for 8 threads 4 times:"
-/usr/bin/time -p ./pi 8 $samples
-/usr/bin/time -p ./pi 8 $samples
-/usr/bin/time -p ./pi 8 $samples
-/usr/bin/time -p ./pi 8 $samples
 
+for t in 1 2 4 8 16
+do
+  echo "threads $t"
+  for x in {1..5}
+  do
+    ./pi $t $samples; 
+  done
+done
