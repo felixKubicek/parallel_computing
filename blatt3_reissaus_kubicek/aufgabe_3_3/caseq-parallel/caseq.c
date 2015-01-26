@@ -24,6 +24,9 @@
 
 /* "ADT" State and line of states (plus border) */
 
+int exponents[32]; 
+
+
 typedef char charState;
 typedef charState charLine[XSIZE + 2];
 
@@ -42,17 +45,17 @@ void print_char_line(charLine * buf, int index);
 
 void setBit(State * line, int i)
 {
-  line[i/32] |= (1 << (i % 32));
+  line[i/32] |= exponents[i%32];
 }
 
 void clearBit(State * line, int i)
 {
-  line[i/32] &= (~ (1 << (i % 32)));
+  line[i/32] &= (~(exponents[i%32]));
 }
 
 int testBit(State * line, int i)
 {
-  return ((line[i/32] & (1 << (i % 32))) != 0);
+  return ((line[i/32] & exponents[i%32]) != 0);
 }
 
 void setBitTo(State * line, int i, int value)
@@ -136,6 +139,17 @@ static void boundary_left_right(Line *buf, int lines)
  */
 static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_size)
 {
+    
+    // initialize exponent lookup table
+    int start_exp = 1;
+    
+    int q;
+    for (q=0; q < 32; q++)
+    {
+      exponents[q] = start_exp;
+      start_exp = start_exp << 1;
+    }
+    
     int x, y;
     boundary_left_right(from, my_lines);
 
