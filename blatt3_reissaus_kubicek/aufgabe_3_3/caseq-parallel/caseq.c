@@ -144,9 +144,14 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
     int top_neighbour_rank = (my_rank == 0) ? world_size - 1 : my_rank - 1;
     int bottom_neighbour_rank = (my_rank + 1) % world_size;
 
+    /* receive ghost zones */
+    /* receive top ghost zone */
+    MPI_Irecv(from[0], sizeof(Line)/sizeof(int), MPI_INT, top_neighbour_rank, 1,  MPI_COMM_WORLD, &reqs[2]);
+    /* receive bottom ghost zone */
+    MPI_Irecv(from[my_lines + 1], sizeof(Line)/sizeof(int), MPI_INT, bottom_neighbour_rank, 0,  MPI_COMM_WORLD, &reqs[3]);
+
     /* send top line */
     MPI_Isend(from[1], sizeof(Line)/sizeof(int), MPI_INT, top_neighbour_rank, 0, MPI_COMM_WORLD, &reqs[0]);
-
     /* send bottom line */
     MPI_Isend(from[my_lines], sizeof(Line)/sizeof(int), MPI_INT, bottom_neighbour_rank, 1, MPI_COMM_WORLD, &reqs[1]);
 
@@ -164,13 +169,6 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
             }
         }
     }
-
-    /* receive ghost zones */
-
-    /* receive top ghost zone */
-    MPI_Irecv(from[0], sizeof(Line)/sizeof(int), MPI_INT, top_neighbour_rank, 1,  MPI_COMM_WORLD, &reqs[2]);
-    /* receive bottom ghost zone */
-    MPI_Irecv(from[my_lines + 1], sizeof(Line)/sizeof(int), MPI_INT, bottom_neighbour_rank, 0,  MPI_COMM_WORLD, &reqs[3]);
 
     MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE);
 
