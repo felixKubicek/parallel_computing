@@ -26,6 +26,7 @@ typedef State Line[XSIZE + 2];
 /* determine random integer between 0 and n-1 */
 #define randInt(n) ((int)(nextRandomLEcuyer() * n))
 void print_field(Line *buf, int lines, char* name);
+void print_line(Line *buf, int index);
 
 /* --------------------- CA simulation -------------------------------- */
 
@@ -129,7 +130,10 @@ int main(int argc, char **argv)
     }
 
     initConfig(from, lines);
+    
+    print_line(from, 1);
 
+    /*
     for (i = 0;  i < its;  i++)
     {
         simulate(from, to, lines);
@@ -139,9 +143,9 @@ int main(int argc, char **argv)
         to = temp;
 
 
-    }
+    }*/
 
-    hash = getMD5DigestStr(from[1], sizeof(Line) * (lines));
+    hash = getMD5DigestStr(from[1], 13);// sizeof(Line) * (lines));
     printf("hash: %s\n", hash);
 
     free(from);
@@ -149,6 +153,22 @@ int main(int argc, char **argv)
     free(hash);
 
     return EXIT_SUCCESS;
+}
+
+void print_line(Line * buf, int index)
+{
+    int z;
+    int sum = 0;
+    
+    for (z = 0; z < (XSIZE + 2); z++)
+    {
+        int bit = buf[index][z];
+        sum += bit;
+      
+        printf("%d", bit);
+    }
+    printf("   line %d \n", index);
+    printf("sum of line %d: %d\n\n", index, sum);
 }
 
 void print_field(Line *buf, int lines, char* name){

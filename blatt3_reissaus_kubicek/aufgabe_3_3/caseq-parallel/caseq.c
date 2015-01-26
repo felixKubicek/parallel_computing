@@ -23,27 +23,53 @@
 #define XSIZE 1024
 
 /* "ADT" State and line of states (plus border) */
-typedef char State;
-typedef State Line[XSIZE + 2];
+
+
+//typedef char State;
+//typedef State Line[XSIZE + 2];
+
+typedef int State;
+typedef State Line[32 + 1];
+
+
+
+
+
 
 /* determine random integer between 0 and n-1 */
 #define randInt(n) ((int)(nextRandomLEcuyer() * n))
 
 void print_field(Line *buf, int lines, char* name);
+void print_line(Line * buf, int index);
 
 /* --------------------- CA simulation -------------------------------- */
 
-
-void print_line(Line line, int index)
+void setBit(State * line, int i)
 {
-    int z;
-    for (z = 0; z < sizeof(Line); z++)
-    {
-        printf("%d", line[z]);
-    }
-    printf("   line %d \n", index);
+  line[i/32] |= (1 << (i % 32));
 }
 
+void clearBit(State * line, int i)
+{
+  line[i/32] &= (~ (1 << (i % 32)));
+}
+
+int testBit(State * line, int i)
+{
+  return ((line[i/32] & (1 << (i % 32))) != 0);
+}
+
+void setBitTo(State * line, int i, int value)
+{
+  if (value > 0)
+  {
+    setBit(line, i);
+  }
+  else
+  {
+    clearBit(line,i);
+  }
+}
 
 /* random starting configuration */
 static void initConfig(Line *buf, int lines, int rem_lines, int my_lines, int my_rank)
@@ -75,7 +101,7 @@ static void initConfig(Line *buf, int lines, int rem_lines, int my_lines, int my
     {
         for (x = 1;  x <= XSIZE;  x++)
         {
-            buf[y][x] = randInt(100) >= 50;
+            setBitTo(buf[y], x, randInt(100) >= 50);
         }
     }
 }
@@ -264,7 +290,16 @@ int main(int argc, char **argv)
     }
 
     initConfig(from, lines, rem_lines, my_lines, my_rank);
-
+    
+    
+    
+    if (my_rank == 0)
+    {
+      print_line(from, 2);
+    }
+    
+    /*
+    
     //simulate transition of cellular automat
     for (i = 0;  i < its;  i++)
     {
@@ -288,15 +323,18 @@ int main(int argc, char **argv)
     MPI_Type_commit(&mpi_line_type);
      
     MPI_Gatherv(*start_buf, my_lines, mpi_line_type, result, line_counts, line_displ, mpi_line_type, 0, MPI_COMM_WORLD);
-   
+    */
     if (my_rank == 0)
     {
-      hash = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
-      printf("%s\n", hash);
+      
+      //hash = getMD5DigestStr(from[1], 13);
+      
+      //hash = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
+      //printf("%s\n", hash);
       
       // clean up 
-      free(result);
-      free(hash);
+      //free(result);
+      //free(hash);
     }
     
     // clean up   
@@ -305,10 +343,29 @@ int main(int argc, char **argv)
     free(from);
     free(to);
     
-    MPI_Type_free(&mpi_line_type);
+    
+    
+    
+    //MPI_Type_free(&mpi_line_type);
     MPI_Finalize();
 
     return EXIT_SUCCESS;
+}
+
+void print_line(Line * buf, int index)
+{
+    int z;
+    int sum = 0;
+    
+    for (z = 0; z < (XSIZE + 2); z++)
+    {
+        int bit = testBit(buf[index], z);
+        sum += bit;
+      
+        printf("%d", bit);
+    }
+    printf("   line %d \n", index);
+    printf("sum of line %d: %d\n\n", index, sum);
 }
 
 void print_field(Line *buf, int lines, char* name){
