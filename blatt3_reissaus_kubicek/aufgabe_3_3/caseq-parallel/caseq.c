@@ -115,9 +115,9 @@ static State anneal[10] = {0, 0, 0, 0, 1, 0, 1, 1, 1, 1};
 /* a: pointer to array; x,y: coordinates; result: n-th element of anneal,
       where n is the number of neighbors */
 #define transition(a, x, y) \
-    (anneal[(a)[(y)-1][(x)-1] + (a)[(y)][(x)-1] + (a)[(y)+1][(x)-1] +\
-            (a)[(y)-1][(x)  ] + (a)[(y)][(x)  ] + (a)[(y)+1][(x)  ] +\
-            (a)[(y)-1][(x)+1] + (a)[(y)][(x)+1] + (a)[(y)+1][(x)+1]])
+    (anneal[testBit((a)[(y)-1],(x)-1) + testBit((a)[(y)],(x)-1) + testBit((a)[(y)+1],(x)-1) +\
+            testBit((a)[(y)-1],(x)) + testBit((a)[(y)],(x)) + testBit((a)[(y)+1],(x)) +\
+            testBit((a)[(y)-1],(x)+1) + testBit((a)[(y)],(x)+1) + testBit((a)[(y)+1],(x)+1)])
 
 
 /* treat torus like boundary conditions for left and right side */
@@ -127,10 +127,10 @@ static void boundary_left_right(Line *buf, int lines)
     for (y = 0;  y <= lines + 1;  y++)
     {
         /* copy rightmost column to the buffer column 0 */
-        buf[y][0      ] = buf[y][XSIZE];
+        setBitTo(buf[y], 0, testBit(buf[y], XSIZE));
 
         /* copy leftmost column to the buffer column XSIZE + 1 */
-        buf[y][XSIZE + 1] = buf[y][1    ];
+        setBitTo(buf[y], XSIZE + 1, testBit(buf[y], 1));
     }
 
 }
@@ -149,10 +149,10 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
     int bottom_neighbour_rank = (my_rank + 1) % world_size;
 
     /* send top line */
-    MPI_Isend(from[1], sizeof(Line), MPI_CHAR, top_neighbour_rank, 0, MPI_COMM_WORLD, &reqs[0]);
+    MPI_Isend(from[1], sizeof(Line)/sizeof(int), MPI_INT, top_neighbour_rank, 0, MPI_COMM_WORLD, &reqs[0]);
 
     /* send bottom line */
-    MPI_Isend(from[my_lines], sizeof(Line), MPI_CHAR, bottom_neighbour_rank, 1, MPI_COMM_WORLD, &reqs[1]);
+    MPI_Isend(from[my_lines], sizeof(Line)/sizeof(int), MPI_INT, bottom_neighbour_rank, 1, MPI_COMM_WORLD, &reqs[1]);
 
     /* calculate inner field if present (when more than 2 my_lines) */
     if (my_lines > 2 )
@@ -164,7 +164,7 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
         {
             for (x = 1;  x <= XSIZE;  x++)
             {
-                to[y][x  ] = transition(from, x  , y);
+                setBitTo(to[y], x, transition(from, x  , y));
             }
         }
     }
@@ -172,9 +172,9 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
     /* receive ghost zones */
 
     /* receive top ghost zone */
-    MPI_Irecv(from[0], sizeof(Line), MPI_CHAR, top_neighbour_rank, 1,  MPI_COMM_WORLD, &reqs[2]);
+    MPI_Irecv(from[0], sizeof(Line)/sizeof(int), MPI_INT, top_neighbour_rank, 1,  MPI_COMM_WORLD, &reqs[2]);
     /* receive bottom ghost zone */
-    MPI_Irecv(from[my_lines + 1], sizeof(Line), MPI_CHAR, bottom_neighbour_rank, 0,  MPI_COMM_WORLD, &reqs[3]);
+    MPI_Irecv(from[my_lines + 1], sizeof(Line)/sizeof(int), MPI_INT, bottom_neighbour_rank, 0,  MPI_COMM_WORLD, &reqs[3]);
 
     MPI_Waitall(4, reqs, MPI_STATUSES_IGNORE);
 
@@ -184,14 +184,14 @@ static void simulate(Line *from, Line *to, int my_lines, int my_rank, int world_
 
     for (x = 1;  x <= XSIZE;  x++)
     {
-        to[top_line_index][x  ] = transition(from, x  , top_line_index);
+        setBitTo(to[top_line_index], x, transition(from, x  , top_line_index));
     }
 
     if (bottom_line_index != top_line_index)
     {
         for (x = 1;  x <= XSIZE;  x++)
         {
-            to[bottom_line_index][x  ] = transition(from, x  , bottom_line_index);
+            setBitTo(to[bottom_line_index], x, transition(from, x  , bottom_line_index));
         }
 
     }
@@ -207,13 +207,17 @@ int main(int argc, char **argv)
     Line *result;
     char *hash = NULL;
 
-    assert(argc == 3);
+    assert(argc == 4);
 
     MPI_Init(&argc, &argv);
 
     lines_global = atoi(argv[1]);
     its = atoi(argv[2]);
-
+    
+    int print_line_index;
+    print_line_index = atoi(argv[3]);
+    
+    
     // get number of processes
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -290,16 +294,7 @@ int main(int argc, char **argv)
     }
 
     initConfig(from, lines, rem_lines, my_lines, my_rank);
-    
-    
-    
-    if (my_rank == 0)
-    {
-      print_line(from, 2);
-    }
-    
-    /*
-    
+     
     //simulate transition of cellular automat
     for (i = 0;  i < its;  i++)
     {
@@ -319,21 +314,22 @@ int main(int argc, char **argv)
     
     MPI_Datatype mpi_line_type;
   
-    MPI_Type_contiguous(sizeof(Line), MPI_CHAR, &mpi_line_type);    
+    MPI_Type_contiguous(sizeof(Line)/sizeof(int), MPI_INT, &mpi_line_type);    
     MPI_Type_commit(&mpi_line_type);
      
     MPI_Gatherv(*start_buf, my_lines, mpi_line_type, result, line_counts, line_displ, mpi_line_type, 0, MPI_COMM_WORLD);
-    */
+    
+    
     if (my_rank == 0)
     {
-      
+      print_line(result, print_line_index);
       //hash = getMD5DigestStr(from[1], 13);
       
       //hash = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
       //printf("%s\n", hash);
       
       // clean up 
-      //free(result);
+      free(result);
       //free(hash);
     }
     
@@ -346,7 +342,7 @@ int main(int argc, char **argv)
     
     
     
-    //MPI_Type_free(&mpi_line_type);
+    MPI_Type_free(&mpi_line_type);
     MPI_Finalize();
 
     return EXIT_SUCCESS;

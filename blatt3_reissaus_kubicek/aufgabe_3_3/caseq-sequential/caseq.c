@@ -110,10 +110,13 @@ int main(int argc, char **argv)
     Line *from, *to, *temp;
     char *hash;
 
-    assert(argc == 3);
+    assert(argc == 4);
 
     lines = atoi(argv[1]);
     its   = atoi(argv[2]);
+    
+    int print_line_index;
+    print_line_index = atoi(argv[3]);
 
     from = (Line*) calloc((lines + 2), sizeof(Line));
     if (!from)
@@ -131,9 +134,6 @@ int main(int argc, char **argv)
 
     initConfig(from, lines);
     
-    print_line(from, 1);
-
-    /*
     for (i = 0;  i < its;  i++)
     {
         simulate(from, to, lines);
@@ -143,14 +143,17 @@ int main(int argc, char **argv)
         to = temp;
 
 
-    }*/
+    }
 
-    hash = getMD5DigestStr(from[1], 13);// sizeof(Line) * (lines));
-    printf("hash: %s\n", hash);
+    //hash = getMD5DigestStr(from[1], sizeof(Line) * (lines));
+    //printf("hash: %s\n", hash);
+    
+    print_line(from, print_line_index);
+    
 
     free(from);
     free(to);
-    free(hash);
+    //free(hash);
 
     return EXIT_SUCCESS;
 }
