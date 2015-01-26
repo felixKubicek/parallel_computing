@@ -6,7 +6,7 @@
 $program_to_run = $ARGV[0];
 $number_lines = $ARGV[1];
 $number_its = $ARGV[2];
-$print_line_index = $ARGV[3];
+#$print_line_index = $ARGV[3];
 
 if (!$program_to_run || !$program_nodes{$program_to_run}) {
   die "Must enter program name to run. Possible programs are: " .
@@ -23,6 +23,6 @@ if (!$program_to_run || !$program_nodes{$program_to_run}) {
     $hosts = "";
   }
 
-  print "$mpirun -n $program_nodes{$program_to_run} $hosts ./$program_to_run $number_lines $number_its $print_line_index\n";
-  system("$mpirun -n $program_nodes{$program_to_run} $hosts ./$program_to_run $number_lines $number_its $print_line_index");
+  print "$mpirun -n $program_nodes{$program_to_run} $hosts ./$program_to_run $number_lines $number_its\n";
+  system("$mpirun -n $program_nodes{$program_to_run} $hosts ./$program_to_run $number_lines $number_its");
 }

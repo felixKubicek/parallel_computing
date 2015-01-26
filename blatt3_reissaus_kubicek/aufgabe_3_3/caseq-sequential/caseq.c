@@ -110,13 +110,13 @@ int main(int argc, char **argv)
     Line *from, *to, *temp;
     char *hash;
 
-    assert(argc == 4);
+    assert(argc == 3);
 
     lines = atoi(argv[1]);
     its   = atoi(argv[2]);
     
-    int print_line_index;
-    print_line_index = atoi(argv[3]);
+    //int print_line_index;
+    //print_line_index = atoi(argv[3]);
 
     from = (Line*) calloc((lines + 2), sizeof(Line));
     if (!from)
@@ -145,15 +145,14 @@ int main(int argc, char **argv)
 
     }
 
-    //hash = getMD5DigestStr(from[1], sizeof(Line) * (lines));
-    //printf("hash: %s\n", hash);
+    //print_line(from, print_line_index);
     
-    print_line(from, print_line_index);
+    hash = getMD5DigestStr(from[1], sizeof(Line) * (lines));
+    printf("hash: %s\n", hash);
     
-
     free(from);
     free(to);
-    //free(hash);
+    free(hash);
 
     return EXIT_SUCCESS;
 }

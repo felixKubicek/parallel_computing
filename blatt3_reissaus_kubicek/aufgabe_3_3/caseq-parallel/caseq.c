@@ -24,16 +24,11 @@
 
 /* "ADT" State and line of states (plus border) */
 
-
-//typedef char State;
-//typedef State Line[XSIZE + 2];
+typedef char charState;
+typedef charState charLine[XSIZE + 2];
 
 typedef int State;
 typedef State Line[32 + 1];
-
-
-
-
 
 
 /* determine random integer between 0 and n-1 */
@@ -41,6 +36,7 @@ typedef State Line[32 + 1];
 
 void print_field(Line *buf, int lines, char* name);
 void print_line(Line * buf, int index);
+void print_char_line(charLine * buf, int index);
 
 /* --------------------- CA simulation -------------------------------- */
 
@@ -205,17 +201,20 @@ int main(int argc, char **argv)
     int lines_global, its, i, *line_counts, *line_displ;
     Line *from, *to, *temp;
     Line *result;
+    
+    charLine *char_result;
+    
     char *hash = NULL;
 
-    assert(argc == 4);
+    assert(argc == 3);
 
     MPI_Init(&argc, &argv);
 
     lines_global = atoi(argv[1]);
     its = atoi(argv[2]);
     
-    int print_line_index;
-    print_line_index = atoi(argv[3]);
+    //int print_line_index;
+    //print_line_index = atoi(argv[3]);
     
     
     // get number of processes
@@ -310,6 +309,7 @@ int main(int argc, char **argv)
     if (my_rank == 0) // process 0 collects all the results
     {
       result = calloc(lines_global,  sizeof(Line));
+      char_result = calloc(lines_global,  XSIZE + 2);
     }
     
     MPI_Datatype mpi_line_type;
@@ -322,15 +322,26 @@ int main(int argc, char **argv)
     
     if (my_rank == 0)
     {
-      print_line(result, print_line_index);
-      //hash = getMD5DigestStr(from[1], 13);
+      //print_line(result, print_line_index);
+      //print_char_line(char_result, print_line_index);
       
-      //hash = getMD5DigestStr(result[0], sizeof(Line) * lines_global);
-      //printf("%s\n", hash);
+      int y;
+      for(y=0; y < lines_global; y++)
+      {
+        int x;
+        for (x = 0; x < XSIZE + 2; x++)
+        {
+          char_result[y][x] = (char) testBit(result[y], x);
+        }
+      }
       
-      // clean up 
-      free(result);
-      //free(hash);
+      hash = getMD5DigestStr(char_result[0], sizeof(charLine) * lines_global);
+      printf("hash: %s\n", hash);
+      
+      // clean up
+      free(char_result);
+      free(result); 
+      free(hash);
     }
     
     // clean up   
@@ -356,6 +367,22 @@ void print_line(Line * buf, int index)
     for (z = 0; z < (XSIZE + 2); z++)
     {
         int bit = testBit(buf[index], z);
+        sum += bit;
+      
+        printf("%d", bit);
+    }
+    printf("   line %d \n", index);
+    printf("sum of line %d: %d\n\n", index, sum);
+}
+
+void print_char_line(charLine * buf, int index)
+{
+    int z;
+    int sum = 0;
+    
+    for (z = 0; z < (XSIZE + 2); z++)
+    {
+        int bit = buf[index][z];
         sum += bit;
       
         printf("%d", bit);
